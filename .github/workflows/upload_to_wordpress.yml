@@ -1,0 +1,41 @@
+name: GNO CloudBot - Upload to WordPress
+
+on:
+  workflow_run:
+    workflows: ["GNO CloudBot - Screenshot Approved Wins"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Upload wins to WordPress
+        env:
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+        run: python upload_to_wordpress.py
+
+      - name: Commit updated approved_wins.json
+        run: |
+          git config user.name "GNO CloudBot"
+          git config user.email "bot@gnopartners.com"
+          git add approved_wins.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Update WordPress upload status [bot]"
+          git push
